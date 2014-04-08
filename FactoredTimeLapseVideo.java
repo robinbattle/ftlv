@@ -237,7 +237,7 @@ public class FactoredTimeLapseVideo extends PApplet {
 			setShadowPixels();
 		}
 
-		loadLocalImage(files[0].getAbsolutePath());
+		loadLocalImage(files[57].getAbsolutePath());
 		System.out.println("setup done");
 	}
 
@@ -251,11 +251,15 @@ public class FactoredTimeLapseVideo extends PApplet {
 
 		for (int i = 0; i < mPixels_size; i++) {		
 			if (!(shadowPixels.get(currentFrame)[i])) {
-				pixels[i] = color(255);;
+				//pixels[i] = color(255);
+				pixels[i] = img.pixels[i];
 			} else {
+
 				pixels[i] = color(0);
 			}
 		}
+		
+
 
 		updatePixels();
 
