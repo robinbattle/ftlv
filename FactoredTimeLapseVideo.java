@@ -38,12 +38,18 @@ public class FactoredTimeLapseVideo extends PApplet {
 	int currentFrame = 0;
 	int numFrames = 0;
 	int mPixels_size = screenWidth * screenHeight;
+	
+	
+
+	
+	
 	float[][] mPixels;
 	int[] initImage;
 
 	PImage img;
 
 	String shadowOutputFolder = "../../shadow/";
+	String matrixOutputFolder = "../../matrix/";
 	String dataFolder = "../../data/tl" + datasetIndex + "/";
 
 	/* Store all the shadow pixels of each frame */
@@ -51,22 +57,46 @@ public class FactoredTimeLapseVideo extends PApplet {
 
 	/* Store the median of 20% smallest intensity */
 	HashMap<Integer, Float> pixelsMedian = new HashMap<Integer, Float>();
+	Matrix X1, W1, H1,
+	       X2, W2, H2,
+	       X3, W3, H3;
 	
-	File[] files = new File(dataFolder).listFiles();
-
+	
 	public FactoredTimeLapseVideo() {
 		File f = new File(dataFolder);
 		numFrames = f.listFiles().length;
 		mPixels = new float[numFrames][mPixels_size];
+		
+		/* Init NMF */
+	    X1 = new Matrix(mPixels_size, numFrames);
+	    W1 = new Matrix(mPixels_size, 1);
+	    H1 = new Matrix(1, numFrames);
+	    X2 = new Matrix(mPixels_size, numFrames);
+	    W2 = new Matrix(mPixels_size, 1);
+	    H2 = new Matrix(1, numFrames);
+	    X3 = new Matrix(mPixels_size, numFrames);
+	    W3 = new Matrix(mPixels_size, 1);
+	    H3 = new Matrix(1, numFrames);
+	  
+	    MatrixUtilities.randomize(X1);
+        MatrixUtilities.randomize(W1);
+        MatrixUtilities.randomize(H1);
+	    MatrixUtilities.randomize(X2);
+        MatrixUtilities.randomize(W2);
+        MatrixUtilities.randomize(H2);
+	    MatrixUtilities.randomize(X3);
+        MatrixUtilities.randomize(W3);
+        MatrixUtilities.randomize(H3);
+	    
 		initImage = new int[mPixels_size];
 		String filename = "../../generated/output.txt";
 		String dataFolder = "../../data/tl" + datasetIndex + "/";
 	}
 
-	void loadLocalImage(String fileName) {
+	void loadLocalImage(String indexString) {
 		loadPixels();
 
-		//String fileName = dataFolder + indexString + ".jpg";
+		String fileName = dataFolder + indexString + ".jpg";
 		System.out.println("load: " + fileName);
 
 		img = loadImage(fileName);
@@ -81,6 +111,7 @@ public class FactoredTimeLapseVideo extends PApplet {
 	void SetUpDefaultPixels() {
 		/* <Pixel Index, Intensity TreeMap> */
 		HashMap<Integer, TreeMap<String, Float>> tempHashMap = new HashMap<Integer, TreeMap<String, Float>>();
+
 		for (int frameIndex = 1; frameIndex < numFrames + 1; frameIndex++) {
 			String frameIndexString = "";
 
@@ -88,9 +119,11 @@ public class FactoredTimeLapseVideo extends PApplet {
 				frameIndexString = "0" + frameIndex;
 			else
 				frameIndexString = "" + frameIndex;
-			loadLocalImage(files[frameIndex-1].getAbsolutePath());
+
+			loadLocalImage(frameIndexString);
 
 			for (int pixelIndex = 0; pixelIndex < pixels.length; pixelIndex++) {
+
 				float r = red(img.pixels[pixelIndex]);
 				float g = green(img.pixels[pixelIndex]);
 				float b = blue(img.pixels[pixelIndex]);
@@ -98,6 +131,11 @@ public class FactoredTimeLapseVideo extends PApplet {
 				float brightness = brightness(img.pixels[pixelIndex]);
 
 				mPixels[frameIndex - 1][pixelIndex] = brightness;
+				X1.set(pixelIndex, frameIndex - 1, r);
+				X2.set(pixelIndex, frameIndex - 1, g);
+				X3.set(pixelIndex, frameIndex - 1, b);
+				
+				
 
 				if (frameIndex == 1){
 					TreeMap<String, Float> pixelIntensityMap = new TreeMap<String, Float>();
@@ -134,6 +172,34 @@ public class FactoredTimeLapseVideo extends PApplet {
 
 			pixelsMedian.put(pixelIndex++, median);
 		}
+		
+		
+		/* NMF */
+        NMFCostKL nmfSolver1 = new NMFCostKL(X1, W1, H1, "solver1");
+        NMFCostKL nmfSolver2 = new NMFCostKL(X2, W2, H2, "solver2");
+        NMFCostKL nmfSolver3 = new NMFCostKL(X3, W3, H3, "solver3");
+        int iterations = 5;
+        for (int i = 0; i < iterations; i++) {
+        	System.out.println(i + ": " + W1.get(0));
+            nmfSolver1.doLeftUpdate();
+            nmfSolver1.doRightUpdate();
+            nmfSolver2.doLeftUpdate();
+            nmfSolver2.doRightUpdate();
+            nmfSolver3.doLeftUpdate();
+            nmfSolver3.doRightUpdate();
+            System.out.println("Iteration " + i);
+        }
+        
+        writeMatrixintoFile("W1", W1);
+        writeMatrixintoFile("H1", H1);
+        writeMatrixintoFile("W2", W2);
+        writeMatrixintoFile("H2", H2);
+        writeMatrixintoFile("W3", W3);
+        writeMatrixintoFile("H3", H3);
+        
+        System.out.println("NMF Done");
+		//System.out.println(X);
+		
 	}
 
 
@@ -185,6 +251,61 @@ public class FactoredTimeLapseVideo extends PApplet {
 			e.printStackTrace();  
 		}  
 	}
+	
+	
+	
+	/**
+	 * Write the Matrix into the file.
+	 * @param frameIndex
+	 * @param array
+	 */
+	void writeMatrixintoFile(String name, Matrix matrix){
+		try {
+			FileOutputStream outStream = new FileOutputStream(matrixOutputFolder + name);  
+			ObjectOutputStream objectOutputStream = new ObjectOutputStream(outStream);  
+			objectOutputStream.writeObject(matrix);  
+			outStream.close();  
+			System.out.println("successful");  
+
+		} catch (FileNotFoundException e) {  
+			e.printStackTrace();  
+
+		} catch (IOException e) {  
+			e.printStackTrace();  
+		}  
+	}
+
+	/**
+	 * Read the Matrix from data file.
+	 * @return 
+	 */
+	Matrix readMatrixFromFile(String name){
+		FileInputStream freader;  
+		Matrix matrix = null;
+		try {  
+			freader = new FileInputStream(matrixOutputFolder + name);  
+			ObjectInputStream objectInputStream = new ObjectInputStream(freader);  
+			matrix = (Matrix) objectInputStream.readObject(); 
+
+			objectInputStream.close();
+
+
+		} catch (FileNotFoundException e) {  
+			// TODO Auto-generated catch block  
+			e.printStackTrace();  
+		} catch (IOException e) {  
+			// TODO Auto-generated catch block  
+			e.printStackTrace();  
+		} catch (ClassNotFoundException e) {  
+			// TODO Auto-generated catch block  
+			e.printStackTrace();  
+		}
+		return matrix;  
+	}
+	
+	
+
+	
 
 	/**
 	 * Set the Shadow Pixels to true which is less than the threshold
@@ -198,13 +319,11 @@ public class FactoredTimeLapseVideo extends PApplet {
 				if (useDefalutVal)
 					_threshold = threshold;
 				else {
-					float tmp = 1.5f * pixelsMedian.get(j);
-					if(tmp > threshold){
-						_threshold =  tmp;
+					if(_threshold>threshold){
+						_threshold =  1.5f * pixelsMedian.get(j);
 					}else{
 						_threshold =  threshold;
 					}
-					
 				}
 				if (mPixels[i][j] < _threshold){
 					shadowPixelArray[j] = true;
@@ -232,12 +351,19 @@ public class FactoredTimeLapseVideo extends PApplet {
 		if (f.exists()) {
 			System.out.println("Loaded from output.txt");
 			readShadowFromFile();
+			
+			W1 = readMatrixFromFile("W1");
+			H1 = readMatrixFromFile("H1");
+			W2 = readMatrixFromFile("W2");
+			H2 = readMatrixFromFile("H2");
+			W3 = readMatrixFromFile("W3");
+			H3 = readMatrixFromFile("H3");
 		} else {
 			SetUpDefaultPixels();
 			setShadowPixels();
 		}
 
-		loadLocalImage(files[57].getAbsolutePath());
+		loadLocalImage("03");
 		System.out.println("setup done");
 	}
 
@@ -251,15 +377,26 @@ public class FactoredTimeLapseVideo extends PApplet {
 
 		for (int i = 0; i < mPixels_size; i++) {		
 			if (!(shadowPixels.get(currentFrame)[i])) {
-				//pixels[i] = color(255);
-				pixels[i] = img.pixels[i];
+				//pixels[i] = -(int)(W.get(i) * H.get(currentFrame));
+				pixels[i] = color(W1.get(i) * H1.get(currentFrame), W2.get(i) * H2.get(currentFrame), W3.get(i) * H3.get(currentFrame));
 			} else {
-
 				pixels[i] = color(0);
 			}
+			
+			
+//			
+//			pixels[i] = color(W1.get(i) * H1.get(currentFrame), W2.get(i) * H2.get(currentFrame), W3.get(i) * H3.get(currentFrame));
+//			pixels[i] = color(X1.get(i,currentFrame),X2.get(i,currentFrame),X3.get(i,currentFrame));
+//			System.out.print("E:" + X2.get(i, currentFrame));
+//			System.out.println("   A:" +  W2.get(i) * H2.get(currentFrame));
+			
+//			System.out.print("colorE:" + color(X1.get(i,currentFrame),X2.get(i,currentFrame),X3.get(i,currentFrame)));
+//			System.out.println("   colorA:" +  pixels[i]);
+			
+			//int expect = -(int)X.get(i, currentFrame);
+			//int actual = -(int)(W.get(i) * H.get(3));
+			//pixels[i] = actual;
 		}
-		
-
 
 		updatePixels();
 
