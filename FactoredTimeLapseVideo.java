@@ -39,10 +39,7 @@ public class FactoredTimeLapseVideo extends PApplet {
 	int numFrames = 0;
 	int mPixels_size = screenWidth * screenHeight;
 	
-	
 
-	
-	
 	float[][] mPixels;
 	int[] initImage;
 
@@ -348,9 +345,9 @@ public class FactoredTimeLapseVideo extends PApplet {
 			for (int pixelIndex = 0; pixelIndex < pixels.length; pixelIndex++) {
 
 				if (!(shadowPixels.get(frameIndex-1)[pixelIndex])) {
-					X1.set(pixelIndex, frameIndex - 1, 255);
-					X2.set(pixelIndex, frameIndex - 1, 255);
-					X3.set(pixelIndex, frameIndex - 1, 255);
+//					X1.set(pixelIndex, frameIndex - 1, 255);
+//					X2.set(pixelIndex, frameIndex - 1, 255);
+//					X3.set(pixelIndex, frameIndex - 1, 255);
 				}else{
 					X4.set(pixelIndex, frameIndex - 1, 0);
 					X5.set(pixelIndex, frameIndex - 1, 0);
@@ -410,6 +407,13 @@ public class FactoredTimeLapseVideo extends PApplet {
         writeMatrixintoFile("W6", W6);
         writeMatrixintoFile("H6", H6);
         
+        writeMatrixintoFile("X1", X1);
+        writeMatrixintoFile("X2", X2);
+        writeMatrixintoFile("X3", X3);
+        writeMatrixintoFile("X4", X4);
+        writeMatrixintoFile("X5", X5);
+        writeMatrixintoFile("X6", X6);
+        
         System.out.println("NMF Done");
 		
 		
@@ -443,17 +447,26 @@ public class FactoredTimeLapseVideo extends PApplet {
 			H5 = readMatrixFromFile("H5");
 			W6 = readMatrixFromFile("W6");
 			H6 = readMatrixFromFile("H6");
+			
+			X1 = readMatrixFromFile("X1");
+			X2 = readMatrixFromFile("X2");
+			X3 = readMatrixFromFile("X3");
+			X4 = readMatrixFromFile("X4");
+			X5 = readMatrixFromFile("X5");
+			X6 = readMatrixFromFile("X6");
+			
 		} else {
 			SetUpDefaultPixels();
 			setShadowPixels();
 			setupNMF();
 		}
 
-		loadLocalImage("03");
+		loadLocalImage("13");
 		System.out.println("setup done");
 	}
 
 	public void draw() {
+
 
 		if (currentFrame >= numFrames - 1) {
 			currentFrame = 0;
@@ -461,14 +474,41 @@ public class FactoredTimeLapseVideo extends PApplet {
 			currentFrame++;
 		}
 
-		for (int i = 0; i < mPixels_size; i++) {		
+		for (int i = 0; i < mPixels_size; i++) {	
+			
+			//sky + shadow*sun
 			if (!(shadowPixels.get(currentFrame)[i])) {
-				//pixels[i] = -(int)(W.get(i) * H.get(currentFrame));
 				pixels[i] = color(W1.get(i) * H1.get(currentFrame), W2.get(i) * H2.get(currentFrame), W3.get(i) * H3.get(currentFrame));
 			} else {
 				pixels[i] = color(W1.get(i) * H1.get(currentFrame), W2.get(i) * H2.get(currentFrame), W3.get(i) * H3.get(currentFrame))
 						+ color(W4.get(i) * H4.get(currentFrame), W5.get(i) * H5.get(currentFrame), W6.get(i) * H6.get(currentFrame));
 			}
+			
+			//sky only
+			pixels[i] =  color(W1.get(i) * H1.get(currentFrame), W2.get(i) * H2.get(currentFrame), W3.get(i) * H3.get(currentFrame));
+			//sun only
+			pixels[i] = color(W4.get(i) * H4.get(currentFrame), W5.get(i) * H5.get(currentFrame), W6.get(i) * H6.get(currentFrame));
+			//sun + shadow
+			if (!(shadowPixels.get(currentFrame)[i])) {
+				pixels[i] = color(W4.get(i) * H4.get(currentFrame), W5.get(i) * H5.get(currentFrame), W6.get(i) * H6.get(currentFrame));
+			} else {
+				pixels[i] = color(0);
+			}
+			
+			
+			//shift image
+			if (!(shadowPixels.get(currentFrame)[i])) {
+				pixels[i] = color(255);
+			} else {
+				pixels[i] = color(0);
+			}
+			
+//			//origin
+//			pixels[i] = color(X1.get(i,currentFrame),X2.get(i,currentFrame),X3.get(i,currentFrame));
+//			
+
+			
+			//pixels[i] = color(W4.get(i) * H4.get(currentFrame), W5.get(i) * H5.get(currentFrame), W6.get(i) * H6.get(currentFrame));
 			
 			//pixels[i] = color(W4.get(i) * H4.get(currentFrame), W5.get(i) * H5.get(currentFrame), W6.get(i) * H6.get(currentFrame));
 			
