@@ -59,7 +59,10 @@ public class FactoredTimeLapseVideo extends PApplet {
 	HashMap<Integer, Float> pixelsMedian = new HashMap<Integer, Float>();
 	Matrix X1, W1, H1,
 	       X2, W2, H2,
-	       X3, W3, H3;
+	       X3, W3, H3,
+	       X4, W4, H4,
+	       X5, W5, H5,
+	       X6, W6, H6;
 	
 	
 	public FactoredTimeLapseVideo() {
@@ -87,6 +90,28 @@ public class FactoredTimeLapseVideo extends PApplet {
 	    MatrixUtilities.randomize(X3);
         MatrixUtilities.randomize(W3);
         MatrixUtilities.randomize(H3);
+        
+        
+	    X4 = new Matrix(mPixels_size, numFrames);
+	    W4 = new Matrix(mPixels_size, 1);
+	    H4 = new Matrix(1, numFrames);
+	    X5 = new Matrix(mPixels_size, numFrames);
+	    W5 = new Matrix(mPixels_size, 1);
+	    H5 = new Matrix(1, numFrames);
+	    X6 = new Matrix(mPixels_size, numFrames);
+	    W6 = new Matrix(mPixels_size, 1);
+	    H6 = new Matrix(1, numFrames);
+	  
+	    MatrixUtilities.randomize(X4);
+        MatrixUtilities.randomize(W4);
+        MatrixUtilities.randomize(H4);
+	    MatrixUtilities.randomize(X5);
+        MatrixUtilities.randomize(W5);
+        MatrixUtilities.randomize(H5);
+	    MatrixUtilities.randomize(X6);
+        MatrixUtilities.randomize(W6);
+        MatrixUtilities.randomize(H6);
+        
 	    
 		initImage = new int[mPixels_size];
 		String filename = "../../generated/output.txt";
@@ -135,6 +160,10 @@ public class FactoredTimeLapseVideo extends PApplet {
 				X2.set(pixelIndex, frameIndex - 1, g);
 				X3.set(pixelIndex, frameIndex - 1, b);
 				
+				X4.set(pixelIndex, frameIndex - 1, r);
+				X5.set(pixelIndex, frameIndex - 1, g);
+				X6.set(pixelIndex, frameIndex - 1, b);
+				
 				
 
 				if (frameIndex == 1){
@@ -174,30 +203,7 @@ public class FactoredTimeLapseVideo extends PApplet {
 		}
 		
 		
-		/* NMF */
-        NMFCostKL nmfSolver1 = new NMFCostKL(X1, W1, H1, "solver1");
-        NMFCostKL nmfSolver2 = new NMFCostKL(X2, W2, H2, "solver2");
-        NMFCostKL nmfSolver3 = new NMFCostKL(X3, W3, H3, "solver3");
-        int iterations = 5;
-        for (int i = 0; i < iterations; i++) {
-        	System.out.println(i + ": " + W1.get(0));
-            nmfSolver1.doLeftUpdate();
-            nmfSolver1.doRightUpdate();
-            nmfSolver2.doLeftUpdate();
-            nmfSolver2.doRightUpdate();
-            nmfSolver3.doLeftUpdate();
-            nmfSolver3.doRightUpdate();
-            System.out.println("Iteration " + i);
-        }
-        
-        writeMatrixintoFile("W1", W1);
-        writeMatrixintoFile("H1", H1);
-        writeMatrixintoFile("W2", W2);
-        writeMatrixintoFile("H2", H2);
-        writeMatrixintoFile("W3", W3);
-        writeMatrixintoFile("H3", H3);
-        
-        System.out.println("NMF Done");
+
 		//System.out.println(X);
 		
 	}
@@ -335,6 +341,78 @@ public class FactoredTimeLapseVideo extends PApplet {
 			shadowPixels.put(i, shadowPixelArray);
 			writeShadowintoFile(i , shadowPixelArray);
 		}
+		
+		for (int frameIndex = 1; frameIndex < numFrames + 1; frameIndex++) {
+
+
+			for (int pixelIndex = 0; pixelIndex < pixels.length; pixelIndex++) {
+
+				if (!(shadowPixels.get(frameIndex-1)[pixelIndex])) {
+					X1.set(pixelIndex, frameIndex - 1, 255);
+					X2.set(pixelIndex, frameIndex - 1, 255);
+					X3.set(pixelIndex, frameIndex - 1, 255);
+				}else{
+					X4.set(pixelIndex, frameIndex - 1, 0);
+					X5.set(pixelIndex, frameIndex - 1, 0);
+					X6.set(pixelIndex, frameIndex - 1, 0);
+				}
+
+			}
+		}
+		
+		
+	}
+	
+	
+
+	
+	void setupNMF(){
+		/* NMF */
+        NMFCostKL nmfSolver1 = new NMFCostKL(X1, W1, H1, "solver1");
+        NMFCostKL nmfSolver2 = new NMFCostKL(X2, W2, H2, "solver2");
+        NMFCostKL nmfSolver3 = new NMFCostKL(X3, W3, H3, "solver3");
+        
+        NMFCostKL nmfSolver4 = new NMFCostKL(X4, W4, H4, "solver4");
+        NMFCostKL nmfSolver5 = new NMFCostKL(X5, W5, H5, "solver5");
+        NMFCostKL nmfSolver6 = new NMFCostKL(X6, W6, H6, "solver6");
+        
+        int iterations = 5;
+        for (int i = 0; i < iterations; i++) {
+        	System.out.println(i + ": " + W1.get(0));
+            nmfSolver1.doLeftUpdate();
+            nmfSolver1.doRightUpdate();
+            nmfSolver2.doLeftUpdate();
+            nmfSolver2.doRightUpdate();
+            nmfSolver3.doLeftUpdate();
+            nmfSolver3.doRightUpdate();
+            
+            nmfSolver4.doLeftUpdate();
+            nmfSolver4.doRightUpdate();
+            nmfSolver5.doLeftUpdate();
+            nmfSolver5.doRightUpdate();
+            nmfSolver6.doLeftUpdate();
+            nmfSolver6.doRightUpdate();
+            
+            System.out.println("Iteration " + i);
+        }
+        
+        writeMatrixintoFile("W1", W1);
+        writeMatrixintoFile("H1", H1);
+        writeMatrixintoFile("W2", W2);
+        writeMatrixintoFile("H2", H2);
+        writeMatrixintoFile("W3", W3);
+        writeMatrixintoFile("H3", H3);
+        
+        writeMatrixintoFile("W4", W4);
+        writeMatrixintoFile("H4", H4);
+        writeMatrixintoFile("W5", W5);
+        writeMatrixintoFile("H5", H5);
+        writeMatrixintoFile("W6", W6);
+        writeMatrixintoFile("H6", H6);
+        
+        System.out.println("NMF Done");
+		
+		
 	}
 
 	public void setup() {
@@ -358,9 +436,17 @@ public class FactoredTimeLapseVideo extends PApplet {
 			H2 = readMatrixFromFile("H2");
 			W3 = readMatrixFromFile("W3");
 			H3 = readMatrixFromFile("H3");
+			
+			W4 = readMatrixFromFile("W4");
+			H4 = readMatrixFromFile("H4");
+			W5 = readMatrixFromFile("W5");
+			H5 = readMatrixFromFile("H5");
+			W6 = readMatrixFromFile("W6");
+			H6 = readMatrixFromFile("H6");
 		} else {
 			SetUpDefaultPixels();
 			setShadowPixels();
+			setupNMF();
 		}
 
 		loadLocalImage("03");
@@ -380,10 +466,13 @@ public class FactoredTimeLapseVideo extends PApplet {
 				//pixels[i] = -(int)(W.get(i) * H.get(currentFrame));
 				pixels[i] = color(W1.get(i) * H1.get(currentFrame), W2.get(i) * H2.get(currentFrame), W3.get(i) * H3.get(currentFrame));
 			} else {
-				pixels[i] = color(0);
+				pixels[i] = color(W1.get(i) * H1.get(currentFrame), W2.get(i) * H2.get(currentFrame), W3.get(i) * H3.get(currentFrame))
+						+ color(W4.get(i) * H4.get(currentFrame), W5.get(i) * H5.get(currentFrame), W6.get(i) * H6.get(currentFrame));
 			}
 			
+			//pixels[i] = color(W4.get(i) * H4.get(currentFrame), W5.get(i) * H5.get(currentFrame), W6.get(i) * H6.get(currentFrame));
 			
+//			pixels[i] = color(W4.get(i) * H4.get(currentFrame), W5.get(i) * H5.get(currentFrame), W6.get(i) * H6.get(currentFrame));
 //			
 //			pixels[i] = color(W1.get(i) * H1.get(currentFrame), W2.get(i) * H2.get(currentFrame), W3.get(i) * H3.get(currentFrame));
 //			pixels[i] = color(X1.get(i,currentFrame),X2.get(i,currentFrame),X3.get(i,currentFrame));
