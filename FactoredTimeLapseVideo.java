@@ -27,14 +27,14 @@ import java.util.regex.*;
  */
 public class FactoredTimeLapseVideo extends PApplet {
 
-	float threshold = 150;
+	float threshold = 90;
 	final int screenWidth = 640;
 	final int screenHeight = 360;
 
 	/* Specify which DataSet we are using */
-	int datasetIndex = 3;
+	int datasetIndex = 4;
 	boolean useDefalutVal = false;
-    boolean fixedImage = true;
+    boolean fixedImage = false;
 	
 	int currentFrame = 0;
 	int numFrames = 0;
@@ -118,10 +118,10 @@ public class FactoredTimeLapseVideo extends PApplet {
 		String dataFolder = "../../data/tl" + datasetIndex + "/";
 	}
 
-	void loadLocalImage(String indexString) {
+	void loadLocalImage(String fileName) {
 		loadPixels();
 
-		String fileName = dataFolder + indexString + ".jpg";
+		//String fileName = dataFolder + indexString + ".jpg";
 		System.out.println("load: " + fileName);
 
 		img = loadImage(fileName);
@@ -130,9 +130,9 @@ public class FactoredTimeLapseVideo extends PApplet {
 		// We must also call loadPixels() on the PImage since we are going
 		// to read its pixels.
 		img.loadPixels();
-	}
-
-	
+	} 
+ 
+	        
 	void loadFixedImage() {
 		loadPixels();
 
@@ -205,6 +205,9 @@ public class FactoredTimeLapseVideo extends PApplet {
 		/* <Pixel Index, Intensity TreeMap> */
 		HashMap<Integer, TreeMap<String, Float>> tempHashMap = new HashMap<Integer, TreeMap<String, Float>>();
 
+		File[] files = new File(dataFolder).listFiles();
+		
+		
 		for (int frameIndex = 1; frameIndex < numFrames + 1; frameIndex++) {
 			String frameIndexString = "";
 
@@ -213,7 +216,7 @@ public class FactoredTimeLapseVideo extends PApplet {
 			else
 				frameIndexString = "" + frameIndex;
 
-			loadLocalImage(frameIndexString);
+			loadLocalImage(files[frameIndex-1].getAbsolutePath());
 
 			for (int pixelIndex = 0; pixelIndex < pixels.length; pixelIndex++) {
 
@@ -288,7 +291,7 @@ public class FactoredTimeLapseVideo extends PApplet {
 			ObjectOutputStream objectOutputStream = new ObjectOutputStream(outStream);  
 			objectOutputStream.writeObject(array);  
 			outStream.close();  
-			System.out.println("successful");  
+			System.out.println("successful(shadow)");  
 
 		} catch (FileNotFoundException e) {  
 			e.printStackTrace();  
@@ -339,7 +342,7 @@ public class FactoredTimeLapseVideo extends PApplet {
 			ObjectOutputStream objectOutputStream = new ObjectOutputStream(outStream);  
 			objectOutputStream.writeObject(matrix);  
 			outStream.close();  
-			System.out.println("successful");  
+			System.out.println("successful(matrix)");  
 
 		} catch (FileNotFoundException e) {  
 			e.printStackTrace();  
@@ -416,9 +419,9 @@ public class FactoredTimeLapseVideo extends PApplet {
 			for (int pixelIndex = 0; pixelIndex < pixels.length; pixelIndex++) {
 
 				if (!(shadowPixels.get(frameIndex-1)[pixelIndex])) {
-//					X1.set(pixelIndex, frameIndex - 1, 0);
-//					X2.set(pixelIndex, frameIndex - 1, 0);
-//					X3.set(pixelIndex, frameIndex - 1, 0);
+					X1.set(pixelIndex, frameIndex - 1, 0);
+					X2.set(pixelIndex, frameIndex - 1, 0);
+					X3.set(pixelIndex, frameIndex - 1, 0);
 				}else{
 					X4.set(pixelIndex, frameIndex - 1, 0);
 					X5.set(pixelIndex, frameIndex - 1, 0);
@@ -532,7 +535,7 @@ public class FactoredTimeLapseVideo extends PApplet {
 			setupNMF();
 		}
 
-		loadLocalImage("13");
+		//loadLocalImage("13");
 		
 		if(fixedImage){
 			loadFixedImage();
@@ -548,7 +551,8 @@ public class FactoredTimeLapseVideo extends PApplet {
 	}
 
 	private void outputFixingImage() {
-
+		loadPixels();
+		
 		PImage newImageSky = createImage(640, 360, RGB);
 		PImage newImageSun = createImage(640, 360, RGB);
 		for (int pixelIndex = 0; pixelIndex < pixels.length; pixelIndex++) {
@@ -573,13 +577,13 @@ public class FactoredTimeLapseVideo extends PApplet {
 
 		for (int i = 0; i < mPixels_size; i++) {	
 
-//			//sky + shadow*sun
-//			if (!(shadowPixels.get(currentFrame)[i])) {
-//				pixels[i] = color(W1.get(i) * H1.get(currentFrame), W2.get(i) * H2.get(currentFrame), W3.get(i) * H3.get(currentFrame));
-//			} else {
-//				pixels[i] = color(W1.get(i) * H1.get(currentFrame), W2.get(i) * H2.get(currentFrame), W3.get(i) * H3.get(currentFrame))
-//						+ color(W4.get(i) * H4.get(currentFrame), W5.get(i) * H5.get(currentFrame), W6.get(i) * H6.get(currentFrame));
-//			}
+			//sky + shadow*sun
+			if ((shadowPixels.get(currentFrame)[i])) {
+				pixels[i] = color(W1.get(i) * H1.get(currentFrame), W2.get(i) * H2.get(currentFrame), W3.get(i) * H3.get(currentFrame));
+			} else {
+				pixels[i] = color(W1.get(i) * H1.get(currentFrame), W2.get(i) * H2.get(currentFrame), W3.get(i) * H3.get(currentFrame))
+						+ color(W4.get(i) * H4.get(currentFrame), W5.get(i) * H5.get(currentFrame), W6.get(i) * H6.get(currentFrame));
+			}
 
 //			//sky only
 //			pixels[i] =  color(W1.get(i) * H1.get(currentFrame), W2.get(i) * H2.get(currentFrame), W3.get(i) * H3.get(currentFrame));
@@ -587,11 +591,11 @@ public class FactoredTimeLapseVideo extends PApplet {
 //			pixels[i] = color(W4.get(i) * H4.get(currentFrame), W5.get(i) * H5.get(currentFrame), W6.get(i) * H6.get(currentFrame));
 			
 //			sun + shadow
-			if (!(shadowPixels.get(currentFrame)[i])) {
-				pixels[i] = color(W4.get(i) * H4.get(currentFrame), W5.get(i) * H5.get(currentFrame), W6.get(i) * H6.get(currentFrame));
-			} else {
-				pixels[i] = color(0);
-			}
+//			if (!(shadowPixels.get(currentFrame)[i])) {
+//				pixels[i] = color(W4.get(i) * H4.get(currentFrame), W5.get(i) * H5.get(currentFrame), W6.get(i) * H6.get(currentFrame));
+//			} else {
+//				pixels[i] = color(0);
+//			}
 
 
 //			//shift image
