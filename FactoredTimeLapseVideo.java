@@ -11,6 +11,7 @@ import java.awt.event.FocusEvent;
 import java.awt.Image;
 import java.io.*;
 import java.net.*;
+import java.nio.file.Files;
 import java.text.*;
 import java.util.*;
 import java.util.Map.Entry;
@@ -33,13 +34,21 @@ public class FactoredTimeLapseVideo extends PApplet {
 
 	/* Specify which DataSet we are using */
 	int datasetIndex = 4;
-	boolean useDefalutVal = false;
-    boolean fixedImage = false;
+	boolean useDefaultVal = false;
+    boolean fixedImage = true;
 	
 	int currentFrame = 0;
 	int numFrames = 0;
 	int mPixels_size = screenWidth * screenHeight;
 
+	boolean pause = false;
+	boolean clean = false;
+	
+	
+	boolean sun_only = false;
+	boolean sky_only = false;
+	boolean	sky_and_sun_shadow = true;
+	boolean	sun_shadow_only = false;
 	
 
 	float[][] mPixels;
@@ -66,6 +75,54 @@ public class FactoredTimeLapseVideo extends PApplet {
 
 
 	public FactoredTimeLapseVideo() {
+		//parameters
+		HashMap<String, Integer> parameters = PropertyFileReader.readParams("../../config.properties");
+
+		if(parameters.get("clean") == 1){
+			clean = true;
+		}else{
+			clean = false;
+		}
+		datasetIndex = parameters.get("datasetIndex");
+		threshold = parameters.get("threshold");
+		if(parameters.get("threshold") == 1){
+			useDefaultVal = true;
+		}else{
+			useDefaultVal = false;
+		}
+		if(parameters.get("fixedImage") == 1){
+			fixedImage = true;
+		}else{
+			fixedImage = false;
+		}
+
+		if(parameters.get("sun_only") == 1){
+			sun_only = true;
+		}else{
+			sun_only = false;
+		}
+		if(parameters.get("sky_only") == 1){
+			sky_only = true;
+		}else{
+			sky_only = false;
+		}
+		if(parameters.get("sky_and_sun_shadow") == 1){
+			sky_and_sun_shadow = true;
+		}else{
+			sky_and_sun_shadow = false;
+		}
+		if(parameters.get("sun_shadow_only") == 1){
+			sun_shadow_only = true;
+		}else{
+			sun_shadow_only = false;
+		}
+
+		if(clean){
+			clean();
+		}
+		
+		dataFolder = "../../data/tl" + datasetIndex + "/";
+		
 		File f = new File(dataFolder);
 		numFrames = f.listFiles().length;
 		mPixels = new float[numFrames][mPixels_size];
@@ -115,7 +172,7 @@ public class FactoredTimeLapseVideo extends PApplet {
 
 		initImage = new int[mPixels_size];
 		String filename = "../../generated/output.txt";
-		String dataFolder = "../../data/tl" + datasetIndex + "/";
+		
 	}
 
 	void loadLocalImage(String fileName) {
@@ -136,9 +193,9 @@ public class FactoredTimeLapseVideo extends PApplet {
 	void loadFixedImage() {
 		loadPixels();
 
-		System.out.println("load: " + fixedImageOutputFolder + "Sky-fixed.jpg");
+		System.out.println("load: " + fixedImageOutputFolder + "Sky.jpg");//-fixed
 
-		img = loadImage(fixedImageOutputFolder + "Sky-fixed.jpg");
+		img = loadImage(fixedImageOutputFolder + "Sky.jpg");
 		img.resize(screenWidth, screenHeight);
 
 		// We must also call loadPixels() on the PImage since we are going
@@ -168,9 +225,9 @@ public class FactoredTimeLapseVideo extends PApplet {
         //-----------------------------------------------------------------------
 		loadPixels();
 
-		System.out.println("load: " + fixedImageOutputFolder + "Sun-fixed.jpg");
+		System.out.println("load: " + fixedImageOutputFolder + "Sun.jpg");//-fixed
 
-		img = loadImage(fixedImageOutputFolder + "Sun-fixed.jpg");
+		img = loadImage(fixedImageOutputFolder + "Sun.jpg");
 		img.resize(screenWidth, screenHeight);
 
 		// We must also call loadPixels() on the PImage since we are going
@@ -393,7 +450,7 @@ public class FactoredTimeLapseVideo extends PApplet {
 			boolean[] shadowPixelArray = new boolean[mPixels_size]; 
 			for (int j = 0; j < mPixels_size; j++) {
 				float _threshold = 0;
-				if (useDefalutVal)
+				if (useDefaultVal)
 					_threshold = threshold;
 				else {
 					if(_threshold>threshold){
@@ -494,6 +551,7 @@ public class FactoredTimeLapseVideo extends PApplet {
 	}
 
 	public void setup() {
+
 		size(screenWidth, screenHeight);
 		frameRate(10);
 
@@ -549,6 +607,15 @@ public class FactoredTimeLapseVideo extends PApplet {
 		
 		System.out.println("setup done");
 	}
+	
+	private void clean(){
+		File f = new File(shadowOutputFolder);
+		File[] files = f.listFiles();
+		for(File file: files){
+			file.delete();
+		}
+	}
+	
 
 	private void outputFixingImage() {
 		loadPixels();
@@ -565,6 +632,40 @@ public class FactoredTimeLapseVideo extends PApplet {
 		newImageSun.save(fixedImageOutputFolder + "Sun.jpg");
 		System.out.println("save: " + fixedImageOutputFolder + "Sun.jpg");
 	}
+	public void mousePressed() {
+		  noLoop();
+		}
+
+	public void mouseReleased() {
+		  loop();
+	}
+	
+	public void keyPressed()
+	{
+	 
+	  switch (key) {
+	    case 'p':
+	    		noLoop();
+	      break;
+	    case 'l':
+	      System.out.println("l");
+	      break;     
+	    default:  
+	      break;
+	  }
+	 
+	}
+	
+	public void keyReleased(){
+		  switch (key) {
+		    case 'p':
+		    		loop();
+		      break;
+    
+		    default:  
+		      break;
+		  }
+	}
 
 	public void draw() {
 
@@ -577,25 +678,36 @@ public class FactoredTimeLapseVideo extends PApplet {
 
 		for (int i = 0; i < mPixels_size; i++) {	
 
-			//sky + shadow*sun
-			if ((shadowPixels.get(currentFrame)[i])) {
-				pixels[i] = color(W1.get(i) * H1.get(currentFrame), W2.get(i) * H2.get(currentFrame), W3.get(i) * H3.get(currentFrame));
-			} else {
-				pixels[i] = color(W1.get(i) * H1.get(currentFrame), W2.get(i) * H2.get(currentFrame), W3.get(i) * H3.get(currentFrame))
-						+ color(W4.get(i) * H4.get(currentFrame), W5.get(i) * H5.get(currentFrame), W6.get(i) * H6.get(currentFrame));
+			if(sky_and_sun_shadow){
+				//sky + shadow*sun
+				if ((shadowPixels.get(currentFrame)[i])) {
+					pixels[i] = color(W1.get(i) * H1.get(currentFrame), W2.get(i) * H2.get(currentFrame), W3.get(i) * H3.get(currentFrame));
+				} else {
+					pixels[i] = color(W1.get(i) * H1.get(currentFrame), W2.get(i) * H2.get(currentFrame), W3.get(i) * H3.get(currentFrame))
+							+ color(W4.get(i) * H4.get(currentFrame), W5.get(i) * H5.get(currentFrame), W6.get(i) * H6.get(currentFrame));
+				}				
+			}
+			
+			if(sun_shadow_only){
+				//sun + shadow
+				if (!(shadowPixels.get(currentFrame)[i])) {
+					pixels[i] = color(W4.get(i) * H4.get(currentFrame), W5.get(i) * H5.get(currentFrame), W6.get(i) * H6.get(currentFrame));
+				} else {
+					pixels[i] = color(0);
+				}
 			}
 
-//			//sky only
-//			pixels[i] =  color(W1.get(i) * H1.get(currentFrame), W2.get(i) * H2.get(currentFrame), W3.get(i) * H3.get(currentFrame));
-//			//sun only
-//			pixels[i] = color(W4.get(i) * H4.get(currentFrame), W5.get(i) * H5.get(currentFrame), W6.get(i) * H6.get(currentFrame));
+			if(sun_only){
+				//sun + shadow
+				pixels[i] =  color(W4.get(i) * H4.get(currentFrame), W5.get(i) * H5.get(currentFrame), W6.get(i) * H6.get(currentFrame));
+			}
 			
-//			sun + shadow
-//			if (!(shadowPixels.get(currentFrame)[i])) {
-//				pixels[i] = color(W4.get(i) * H4.get(currentFrame), W5.get(i) * H5.get(currentFrame), W6.get(i) * H6.get(currentFrame));
-//			} else {
-//				pixels[i] = color(0);
-//			}
+			if(sky_only){
+				//sun + shadow
+				pixels[i] =  color(W1.get(i) * H1.get(currentFrame), W2.get(i) * H2.get(currentFrame), W3.get(i) * H3.get(currentFrame));
+			}
+
+
 
 
 //			//shift image
@@ -606,7 +718,7 @@ public class FactoredTimeLapseVideo extends PApplet {
 //			}
 
 			//origin
-//			pixels[i] = color(X1.get(i,currentFrame),X2.get(i,currentFrame),X3.get(i,currentFrame));
+//  		pixels[i] = color(X1.get(i,currentFrame),X2.get(i,currentFrame),X3.get(i,currentFrame));
 //			
 
 			//pixels[i] = color(W1.get(i) * H1.get(0), W2.get(i) * H2.get(0), W3.get(i) * H3.get(0));
